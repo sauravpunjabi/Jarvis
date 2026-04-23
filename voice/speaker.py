@@ -106,3 +106,27 @@ class JarvisSpeaker:
         self._play_audio(tmp_path)
         
         # Delete temp file after pygame is done with it
+        # Delete temp file after pygame is done with it
+        os.unlink(tmp_path)
+
+    def _play_audio(self, file_path: str):
+        # Load and play the audio file using pygame
+        pygame.mixer.music.load(file_path)
+        pygame.mixer.music.play()
+        
+        # Wait until the audio finishes playing
+        while pygame.mixer.music.get_busy():
+            pygame.time.Clock().tick(10)
+
+    def cleanup(self):
+        """Release pygame resources cleanly."""
+        pygame.mixer.quit()
+        print("[SPEAKER] Audio resources cleaned up.")
+
+
+# ── Standalone Test ───────────────────────────────────────────────────────────
+
+if __name__ == "__main__":
+    speaker = JarvisSpeaker()
+    speaker.speak("Good evening, sir. JARVIS is online and ready.")
+    speaker.cleanup()
