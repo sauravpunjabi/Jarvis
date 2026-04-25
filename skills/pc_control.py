@@ -170,14 +170,14 @@ class PcController:
         try:
             import PIL.ImageGrab as ImageGrab
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            path = os.path.expanduser(f"~/Desktop/jarvis_screenshot_{timestamp}.png")
+            path = os.path.join(os.path.expanduser("~"), "OneDrive", "Desktop", f"jarvis_screenshot_{timestamp}.png")
             screenshot = ImageGrab.grab()
             screenshot.save(path)
             return f"Screenshot saved to your Desktop, sir."
         except ImportError:
             # Fallback using PowerShell if PIL not available
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            path = os.path.expanduser(f"~/Desktop/jarvis_screenshot_{timestamp}.png")
+            path = os.path.join(os.path.expanduser("~"), "OneDrive", "Desktop", f"jarvis_screenshot_{timestamp}.png")
             subprocess.run([
                 "powershell", "-c",
                 f"Add-Type -AssemblyName System.Windows.Forms; "
@@ -218,5 +218,5 @@ if __name__ == "__main__":
     print("\n--- Screenshot ---")
     print(pc.take_screenshot())
 
-    print("\n--- Open brave ---")
-    print(pc.open_app("brave"))
+    print("\n--- Open spotify ---")
+    print(pc.open_app("spotify"))
