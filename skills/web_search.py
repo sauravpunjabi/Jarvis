@@ -1,9 +1,7 @@
 #let jarvis search web and wikipedia 
 
-from PIL.Image import enum
-from wikipedia import wikipedia
 import wikipedia
-from duckduckgo_search import DDGS
+from ddgs import DDGS
 
 class WebSearcher:
     def __init__(self):
@@ -54,3 +52,34 @@ class WebSearcher:
 
         except Exception as e:
             return f"Web search failed, sir. {e}"
+
+    #smart search
+    def smart_search(self, query: str) -> str:
+        q = query.lower()
+
+        wiki_triggers = ["what is", "who is", "what are", "tell me about",
+                         "explain", "define", "what was", "who was"]
+
+        use_wiki = any(q.startswith(trigger) for trigger in wiki_triggers)
+
+        if use_wiki:
+            print(f"[SEARCH] Using Wikipedia for: {query}")
+            return self.search_wiki(query)
+        else:
+            print(f"[SEARCH] Using DuckDuckGo for: {query}")
+            return self.search_web(query)
+    
+    #standalone test
+if __name__ == "__main__":
+    searcher = WebSearcher()
+
+    print("\n--- Wikipedia Test ---")
+    print(searcher.search_wiki("artificial intelligence"))
+
+    print("\n--- DuckDuckGo Test ---")
+    print(searcher.search_web("latest news in technology"))
+
+    print("\n--- Smart Search Test ---")
+    print(searcher.smart_search("what is machine learning"))
+    print()
+    print(searcher.smart_search("best laptop 2026"))
