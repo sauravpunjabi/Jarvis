@@ -8,7 +8,7 @@ import time
 from dotenv import load_dotenv
 
 # Load our secret API keys from the .env file
-load_dotenv()
+load_dotenv(override=True)
 
 # This is JARVIS's personality — everything he says will follow these rules
 # Think of it as the instructions we give him before he starts working
