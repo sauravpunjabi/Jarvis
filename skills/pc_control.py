@@ -56,9 +56,9 @@ class PcController:
             interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
             volume = cast(interface, POINTER(IAudioEndpointVolume))
 
-            current = volume.GetMasterVolumeLevel()
+            current = volume.GetMasterVolumeLevelScalar()
             new_vol = min(1.0, current + 0.1) #increase by 10%
-            volume.SetMasterVolumeLevel(new_vol, None)
+            volume.SetMasterVolumeLevelScalar(new_vol, None)
             return f"Volume increased to {int(new_vol * 100)} percent, sir."
         except ImportError:
             import subprocess
@@ -82,9 +82,9 @@ class PcController:
             interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
             volume = cast(interface, POINTER(IAudioEndpointVolume))
 
-            current = volume.GetMasterVolumeLevel()
+            current = volume.GetMasterVolumeLevelScalar()
             new_vol = max(0.0, current - 0.1)
-            volume.SetMasterVolumeLevel(new_vol, None)
+            volume.SetMasterVolumeLevelScalar(new_vol, None)
             return f"Volume decreased to {int(new_vol * 100)} percent, sir."
         except ImportError:
             subprocess.run(["powershell", "-c",
