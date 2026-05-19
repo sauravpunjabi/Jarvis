@@ -73,7 +73,7 @@ class JarvisMemory:
     
     def get_user_preferences(self):
         """Return list of user's preferences or empty list"""
-        return self.memory["user"]["preferances"]
+        return self.memory["user"]["preferences"]
     def get_user_notes(self):
         """Return list of user's notes or empty list"""
         return self.memory["user"]["notes"]

@@ -1,7 +1,5 @@
 #lets jarvis control pc via commands.
 
-from ast import Import
-from asyncio import subprocess
 import os
 import subprocess
 import psutil
@@ -51,11 +49,11 @@ class PcController:
         try: 
             from ctypes import cast, POINTER
             from comtypes import CLSCTX_ALL
-            from pycaw.pycaw import AudiioUtilities, IAudioEndpointVolume
+            from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
             import math
 
             devices = AudioUtilities.GetSpeakers()
-            interface = devices.Activate(IAudioEndpointVolume._iid, CLSCTX_ALL, None)
+            interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
             volume = cast(interface, POINTER(IAudioEndpointVolume))
 
             current = volume.GetMasterVolumeLevel()
@@ -81,12 +79,12 @@ class PcController:
             from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
 
             devices = AudioUtilities.GetSpeakers()
-            interface = devices.Activate(IAudioEndpointVolume._iid, CLSCTX_ALL, None)
+            interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
             volume = cast(interface, POINTER(IAudioEndpointVolume))
 
             current = volume.GetMasterVolumeLevel()
             new_vol = max(0.0, current - 0.1)
-            volume.SetMasterVolumeLevel(new_vold, None)
+            volume.SetMasterVolumeLevel(new_vol, None)
             return f"Volume decreased to {int(new_vol * 100)} percent, sir."
         except ImportError:
             subprocess.run(["powershell", "-c",
