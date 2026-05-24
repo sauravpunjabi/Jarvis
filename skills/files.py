@@ -98,11 +98,39 @@ class FilesSkill:
             print(f"[FILES] Error creating file: {e}")
             return f"I encountered an error creating the file, sir: {e}"
 
+    def list_files(self, folder: str) -> str:
+        """Lists files in a folder and returns a readable sentence."""
+        if not os.path.exists(folder):
+            return f"I cannot find the folder '{folder}', sir."
+        try:
+            files = [f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))]
+            if not files:
+                return f"The folder '{folder}' is empty, sir."
+            count = len(files)
+            shown = files[:10]
+            file_list = ", ".join(shown)
+            suffix = f" — showing first 10 of {count}" if count > 10 else ""
+            return f"There are {count} file(s) in that folder{suffix}, sir: {file_list}."
+        except Exception as e:
+            return f"I couldn't list the files, sir. {e}"
+
+    def delete_file(self, file_path: str, confirmed: bool = False) -> str:
+        """Deletes a file. Requires confirmed=True to proceed."""
+        if not os.path.exists(file_path):
+            return f"I cannot find the file '{os.path.basename(file_path)}', sir."
+        if not confirmed:
+            return f"Are you sure you want to delete '{os.path.basename(file_path)}', sir? Confirm to proceed."
+        try:
+            os.remove(file_path)
+            return f"Deleted '{os.path.basename(file_path)}', sir."
+        except Exception as e:
+            return f"I couldn't delete the file, sir. {e}"
+
     def open_file(self, file_path: str) -> str:
         """Opens a file using the default Windows application."""
         if not os.path.exists(file_path):
             return f"I cannot find the file {os.path.basename(file_path)}, sir."
-            
+
         try:
             print(f"[FILES] Opening {file_path}...")
             os.startfile(file_path)

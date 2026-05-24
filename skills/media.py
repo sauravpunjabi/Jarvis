@@ -1,9 +1,9 @@
 import os
 import subprocess
+import webbrowser
 import pyautogui
 import time
 import yt_dlp
-from typing import Optional
 
 # The Media module handles Spotify integration, global media controls,
 # and YouTube playback using yt-dlp (download and play audio).
@@ -108,6 +108,75 @@ class MediaSkill:
         except Exception as e:
             print(f"[MEDIA] Error with YouTube playback: {e}")
             return "I encountered an error while trying to play the YouTube audio, sir."
+
+
+    def play_spotify_song(self, query: str) -> str:
+        """Opens Spotify search for the given query."""
+        print(f"[MEDIA] Searching Spotify for: {query}")
+        try:
+            os.startfile(f"spotify:search:{query}")
+            return f"Searching Spotify for {query}, sir."
+        except Exception:
+            webbrowser.open(f"https://open.spotify.com/search/{query.replace(' ', '%20')}")
+            return f"Opening Spotify search for {query} in browser, sir."
+
+    def download_youtube(self, query: str, path: str = None) -> str:
+        """Downloads a YouTube video/audio as mp3 to the given path (default: Desktop)."""
+        if path is None:
+            path = os.path.join(os.path.expanduser("~"), "OneDrive", "Desktop")
+
+        print(f"[MEDIA] Downloading: {query}")
+        output_template = os.path.join(path, "%(title)s.%(ext)s")
+        ydl_opts = {
+            "format": "bestaudio/best",
+            "postprocessors": [{
+                "key": "FFmpegExtractAudio",
+                "preferredcodec": "mp3",
+                "preferredquality": "192",
+            }],
+            "outtmpl": output_template,
+            "default_search": "ytsearch1:",
+            "noplaylist": True,
+            "quiet": True,
+        }
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(f"ytsearch1:{query}", download=True)
+                entries = info.get("entries") or [info]
+                title = entries[0].get("title", query)
+            return f"Downloaded '{title}' to your Desktop, sir."
+        except Exception as e:
+            print(f"[MEDIA] Download error: {e}")
+            return f"I encountered an error downloading that, sir."
+
+    def get_volume(self) -> str:
+        """Returns current system volume as a percentage."""
+        try:
+            from ctypes import cast, POINTER
+            from comtypes import CLSCTX_ALL
+            from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
+            devices = AudioUtilities.GetSpeakers()
+            interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+            volume = cast(interface, POINTER(IAudioEndpointVolume))
+            level = int(volume.GetMasterVolumeLevelScalar() * 100)
+            return f"Volume is at {level} percent, sir."
+        except Exception as e:
+            return f"Couldn't read volume, sir. {e}"
+
+    def set_volume(self, level: int) -> str:
+        """Sets system volume to the given percentage (0–100)."""
+        try:
+            from ctypes import cast, POINTER
+            from comtypes import CLSCTX_ALL
+            from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
+            devices = AudioUtilities.GetSpeakers()
+            interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+            volume = cast(interface, POINTER(IAudioEndpointVolume))
+            scalar = max(0.0, min(1.0, level / 100))
+            volume.SetMasterVolumeLevelScalar(scalar, None)
+            return f"Volume set to {level} percent, sir."
+        except Exception as e:
+            return f"Couldn't set volume, sir. {e}"
 
 
 if __name__ == "__main__":

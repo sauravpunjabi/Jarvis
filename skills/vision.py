@@ -1,4 +1,5 @@
 import os
+import base64
 import cv2
 import pyautogui
 from PIL import Image
@@ -6,32 +7,47 @@ from google import genai
 from google.genai import types
 from dotenv import load_dotenv
 
-# Load environment variables (API Key)
 load_dotenv(override=True)
-
-# The Vision module allows JARVIS to see through the webcam and understand the screen.
-# It uses Gemini 2.5 Flash which has native multimodal (vision) capabilities.
 
 class VisionSkill:
     def __init__(self):
-        # We use the same API key and client for vision analysis
         self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+        self._tmp_screen = "temp_screenshot.png"
+        self._tmp_camera = "temp_webcam.jpg"
         print("[VISION] Vision module initialized.")
 
+    def capture_screen(self) -> str:
+        """Takes a screenshot, saves to temp file, returns path."""
+        screenshot = pyautogui.screenshot()
+        screenshot.save(self._tmp_screen)
+        return self._tmp_screen
+
+    def capture_camera(self):
+        """Captures one webcam frame, saves to temp file, returns path or None."""
+        cap = cv2.VideoCapture(0)
+        if not cap.isOpened():
+            return None
+        ret, frame = cap.read()
+        cap.release()
+        if not ret:
+            return None
+        cv2.imwrite(self._tmp_camera, frame)
+        return self._tmp_camera
+
+    def image_to_base64(self, image_path: str) -> str:
+        """Converts an image file to a base64-encoded string."""
+        with open(image_path, "rb") as f:
+            return base64.b64encode(f.read()).decode("utf-8")
+
     def _analyze_image(self, image_path: str, prompt: str) -> str:
-        """
-        Private method to send an image and a prompt to Gemini 2.5 Flash for analysis.
-        """
+        """Sends image + prompt to Gemini Vision. Returns JARVIS response."""
         try:
             image = Image.open(image_path)
-            
-            # Use JARVIS persona specifically tailored for vision responses
             system_instruction = (
-                "You are JARVIS, an AI assistant. Answer the user's question about the image concisely and confidently. "
-                "Address the user as 'sir'. Do not overexplain. "
-                "If asked 'what am I holding', just identify the object."
+                "You are JARVIS, a highly intelligent AI assistant. "
+                "Respond naturally and conversationally. Address the user as 'sir'. "
+                "Be concise and informative, not robotic."
             )
-            
             response = self.client.models.generate_content(
                 model="gemini-2.5-flash",
                 contents=[
@@ -39,7 +55,7 @@ class VisionSkill:
                         role="user",
                         parts=[
                             types.Part.from_image(image),
-                            types.Part.from_text(text=prompt)
+                            types.Part.from_text(text=prompt),
                         ]
                     )
                 ],
@@ -51,75 +67,76 @@ class VisionSkill:
             return response.text.strip()
         except Exception as e:
             print(f"[VISION] Error analyzing image: {e}")
-            return f"I'm sorry sir, I encountered an error while analyzing the image: {e}"
+            return "I'm sorry sir, I encountered an error while analyzing the image."
 
-    def see_webcam(self, user_prompt: str = "What do you see in this image?") -> str:
-        """
-        Captures a frame from the webcam and analyzes it.
-        Useful for "what am I holding" or "what do you see".
-        """
-        print("[VISION] Capturing webcam feed...")
-        # Open the default camera (index 0)
-        cap = cv2.VideoCapture(0)
-        
-        if not cap.isOpened():
-            return "I am unable to access the camera, sir."
-            
-        # Read a single frame
-        ret, frame = cap.read()
-        cap.release()
-        
-        if not ret:
-            return "Failed to capture an image from the camera, sir."
-            
-        # Save the frame temporarily
-        temp_path = "temp_webcam.jpg"
-        cv2.imwrite(temp_path, frame)
-        
-        # Analyze the image using Gemini
-        print(f"[VISION] Analyzing webcam capture for prompt: '{user_prompt}'")
-        result = self._analyze_image(temp_path, user_prompt)
-        
-        # Clean up the temporary file
-        if os.path.exists(temp_path):
-            os.remove(temp_path)
-            
+    def _cleanup(self, path):
+        if path and os.path.exists(path):
+            os.remove(path)
+
+    def describe_screen(self) -> str:
+        """Screenshot → Gemini Vision → natural JARVIS description of the screen."""
+        print("[VISION] Capturing and describing screen...")
+        path = self.capture_screen()
+        result = self._analyze_image(
+            path,
+            "Describe what you see on this screen naturally as JARVIS would. "
+            "Be specific about apps, content, and information visible."
+        )
+        self._cleanup(path)
         return result
 
-    def see_screen(self, user_prompt: str = "What is on my screen?") -> str:
-        """
-        Captures a screenshot and analyzes it.
-        Useful for "what's on my screen".
-        """
-        print("[VISION] Capturing screenshot...")
-        temp_path = "temp_screenshot.png"
-        
-        try:
-            # Take a screenshot and save it
-            screenshot = pyautogui.screenshot()
-            screenshot.save(temp_path)
-            
-            # Analyze the screenshot using Gemini
-            print(f"[VISION] Analyzing screenshot for prompt: '{user_prompt}'")
-            result = self._analyze_image(temp_path, user_prompt)
-            
-            # Clean up the temporary file
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
-                
-            return result
-        except Exception as e:
-            print(f"[VISION] Screenshot failed: {e}")
-            return "I was unable to capture your screen, sir."
+    def describe_camera(self, query: str = "What do you see?") -> str:
+        """Webcam capture → Gemini Vision → conversational JARVIS response."""
+        print("[VISION] Capturing camera feed...")
+        path = self.capture_camera()
+        if not path:
+            return "I am unable to access the camera, sir."
+        result = self._analyze_image(
+            path,
+            f"The user asked: {query}. Look at this camera image and respond as JARVIS — "
+            "identify what you see, provide interesting information, be warm and conversational, not robotic."
+        )
+        self._cleanup(path)
+        return result
 
-# This block allows us to test the vision module independently
+    def identify_object(self, query: str = "What am I holding?") -> str:
+        """Full object identification with facts and natural JARVIS delivery."""
+        print("[VISION] Identifying object via camera...")
+        path = self.capture_camera()
+        if not path:
+            return "I am unable to access the camera, sir."
+        result = self._analyze_image(
+            path,
+            f"The user asked: '{query}'. Identify the object in this image. "
+            "Respond as JARVIS: name the object, give 2-3 interesting facts, offer a relevant follow-up. "
+            "Example style: 'That appears to be a Rubik's Cube sir, invented by Erno Rubik in 1974. "
+            "There are over 43 quintillion possible configurations. Shall I look up solving algorithms?'"
+        )
+        self._cleanup(path)
+        return result
+
+    def read_text_from_image(self, source: str = "camera") -> str:
+        """OCR via Gemini Vision — reads all visible text from camera or screen."""
+        print(f"[VISION] Reading text from {source}...")
+        path = self.capture_screen() if source == "screen" else self.capture_camera()
+        if not path:
+            return "I am unable to capture an image, sir."
+        result = self._analyze_image(
+            path,
+            "Please read and transcribe all visible text in this image exactly as it appears. "
+            "If there is no readable text, say so clearly."
+        )
+        self._cleanup(path)
+        return result
+
+    # Backward-compatible aliases
+    def see_webcam(self, user_prompt: str = "What do you see?") -> str:
+        return self.describe_camera(user_prompt)
+
+    def see_screen(self, user_prompt: str = "What is on my screen?") -> str:  # noqa: ARG002
+        return self.describe_screen()
+
+
 if __name__ == "__main__":
     vision = VisionSkill()
-    print("Testing Vision System...")
-    
-    print("\n--- Testing Screen Analysis ---")
-    print(vision.see_screen("Describe what is on my screen in one sentence."))
-    
-    # Uncomment to test webcam (might turn on your camera light for a second)
-    # print("\n--- Testing Webcam Analysis ---")
-    # print(vision.see_webcam("What is visible in this frame?"))
+    print(vision.describe_screen())

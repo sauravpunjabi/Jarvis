@@ -2,13 +2,12 @@
 
 import os
 import subprocess
+import webbrowser
 import psutil
 import ctypes
 from datetime import datetime
 
-#a list of operations im adding to check if it will work
-
-APP_MAP ={
+APP_MAP = {
     "brave": "C:\\Program Files\\BraveSoftware\\Brave-Browser\\Application\\brave.exe",
     "whatsapp": "WhatsApp.exe",
     "spotify": "Spotify.exe",
@@ -18,13 +17,85 @@ APP_MAP ={
     "word": "winword.exe",
     "excel": "excel.exe",
     "powerpoint": "powerpnt.exe",
+    "calculator": "calc.exe",
+    "explorer": "explorer.exe",
+    "chrome": "chrome.exe",
+    "vlc": "vlc.exe",
+    "vscode": "code",
+    "vs code": "code",
+}
+
+WEBSITE_MAP = {
+    "youtube": "https://youtube.com",
+    "netflix": "https://netflix.com",
+    "instagram": "https://instagram.com",
+    "twitter": "https://twitter.com",
+    "x": "https://twitter.com",
+    "google": "https://google.com",
+    "github": "https://github.com",
+    "reddit": "https://reddit.com",
+    "whatsapp web": "https://web.whatsapp.com",
+    "whatsapp": "https://web.whatsapp.com",
+    "gmail": "https://mail.google.com",
+    "maps": "https://maps.google.com",
+    "google maps": "https://maps.google.com",
+    "amazon": "https://amazon.in",
+    "flipkart": "https://flipkart.com",
+    "linkedin": "https://linkedin.com",
+    "chatgpt": "https://chat.openai.com",
+    "claude": "https://claude.ai",
 }
 
 class PcController:
     def __init__(self):
         print("[PC] PC controller initialized.")
 
-    #to open applications
+    def open_anything(self, query: str) -> str:
+        """Smart open: handles websites, apps, and falls back to Google search."""
+        q = query.lower().strip()
+
+        # Remove filler words to get the target name
+        for filler in ["open ", "launch ", "start ", "go to ", "take me to "]:
+            if q.startswith(filler):
+                q = q[len(filler):]
+                break
+
+        # 1. Check WEBSITE_MAP first (exact match)
+        if q in WEBSITE_MAP:
+            webbrowser.open(WEBSITE_MAP[q])
+            return f"Opening {q.title()}, sir."
+
+        # 2. Partial match in WEBSITE_MAP
+        for site, url in WEBSITE_MAP.items():
+            if site in q or q in site:
+                webbrowser.open(url)
+                return f"Opening {site.title()}, sir."
+
+        # 3. Looks like a URL or explicit website request
+        if any(x in q for x in [".com", ".org", ".in", ".net", ".io", "website"]):
+            url = q if q.startswith("http") else f"https://{q}"
+            webbrowser.open(url)
+            return f"Opening {q}, sir."
+
+        # 4. Check APP_MAP
+        if q in APP_MAP:
+            try:
+                subprocess.Popen(APP_MAP[q], shell=True)
+                return f"Opening {q.title()}, sir."
+            except Exception as e:
+                pass
+
+        # 5. Try launching directly as an executable
+        try:
+            subprocess.Popen(q, shell=True)
+            return f"Attempting to open {q}, sir."
+        except Exception:
+            pass
+
+        # 6. Google search fallback
+        webbrowser.open(f"https://google.com/search?q={q}+download")
+        return f"I couldn't find {q} locally, sir. Searching Google instead."
+
     def open_app(self, app_name: str) -> str:
         """opens an application by name"""
         name = app_name.lower().strip()

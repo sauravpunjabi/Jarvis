@@ -19,7 +19,10 @@ DEFAULT_MEMORY = {
         "created_at": str(datetime.now().date()),
         "total_sessions": 0,
         "last_seen": None
-    }
+    },
+    "contacts": {},
+    "reminders": [],
+    "known_faces": []
 }
 
 
@@ -153,7 +156,55 @@ class JarvisMemory:
                 return f"preference:{pref}"
         return None #if no input
 
-        #reset
+    # ── Contacts ────────────────────────────────────────────────────────────────
+
+    def add_contact(self, name: str, phone: str = None, email: str = None):
+        """Saves a contact with optional phone and email."""
+        key = name.lower().strip()
+        self.memory.setdefault("contacts", {})[key] = {"phone": phone, "email": email}
+        self._save()
+        print(f"[MEMORY] Saved contact: {name}")
+
+    def get_contact(self, name: str) -> dict:
+        """Returns contact dict {phone, email} or empty dict if not found."""
+        return self.memory.get("contacts", {}).get(name.lower().strip(), {})
+
+    # ── Reminders ───────────────────────────────────────────────────────────────
+
+    def add_reminder(self, time_str: str, message: str):
+        """Saves a reminder entry to memory."""
+        self.memory.setdefault("reminders", []).append({
+            "time": time_str,
+            "message": message,
+            "triggered": False
+        })
+        self._save()
+        print(f"[MEMORY] Reminder saved: '{message}' at {time_str}")
+
+    def get_reminders(self) -> list:
+        """Returns all reminder entries."""
+        return self.memory.get("reminders", [])
+
+    def mark_reminder_triggered(self, index: int):
+        reminders = self.memory.get("reminders", [])
+        if 0 <= index < len(reminders):
+            reminders[index]["triggered"] = True
+            self._save()
+
+    # ── Known Faces ─────────────────────────────────────────────────────────────
+
+    def add_known_face(self, name: str):
+        """Records that a face encoding file exists for this name."""
+        faces = self.memory.setdefault("known_faces", [])
+        if name.lower() not in faces:
+            faces.append(name.lower())
+            self._save()
+
+    def get_known_faces(self) -> list:
+        return self.memory.get("known_faces", [])
+
+    # ── Reset ───────────────────────────────────────────────────────────────────
+
     def wipe(self):
         """Reset all memory to default. Use carefully."""
         self.memory = dict(DEFAULT_MEMORY)

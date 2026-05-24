@@ -1,8 +1,9 @@
 import requests
+import threading
 from datetime import datetime
 
 # Weather module using Open-Meteo API (requires no API key)
-# This module provides current time, date, and live weather.
+# This module provides current time, date, live weather, and reminders.
 
 class WeatherSkill:
     def __init__(self, default_city: str = "Nagpur"):
@@ -10,6 +11,76 @@ class WeatherSkill:
         self.base_url = "https://api.open-meteo.com/v1/forecast"
         self.geocoding_url = "https://geocoding-api.open-meteo.com/v1/search"
         print("[WEATHER] Weather module initialized.")
+
+    def get_time(self) -> str:
+        now = datetime.now()
+        return f"It is {now.strftime('%I:%M %p')}, sir."
+
+    def get_date(self) -> str:
+        now = datetime.now()
+        day = now.day
+        if 11 <= day % 100 <= 13:
+            suffix = "th"
+        else:
+            suffix = {1: "st", 2: "nd", 3: "rd"}.get(day % 10, "th")
+        return f"Today is {now.strftime('%A')}, {day}{suffix} {now.strftime('%B %Y')}, sir."
+
+    def set_reminder(self, time_str: str, message: str, callback=None) -> str:
+        """
+        Schedules a reminder. Supports:
+          - 'in X minutes' / 'in X seconds'
+          - 'at HH:MM AM/PM' or 'at HH:MM'
+        Calls callback(message) when triggered; prints if no callback given.
+        """
+        delay = self._parse_delay(time_str)
+        if delay is None:
+            return f"I couldn't parse the time '{time_str}', sir. Try 'in 5 minutes' or 'at 5:30 PM'."
+
+        def _fire():
+            if callback:
+                callback(f"Reminder, sir: {message}")
+            else:
+                print(f"\n[REMINDER] {message}")
+
+        threading.Timer(delay, _fire).start()
+        return f"Reminder set for {time_str}, sir. I'll let you know: '{message}'."
+
+    def _parse_delay(self, time_str: str):
+        """Returns seconds until the given time expression, or None if unparseable."""
+        import re
+        s = time_str.lower().strip()
+
+        # 'in X minutes' or 'in X seconds' or 'in X hours'
+        m = re.match(r"in\s+(\d+)\s*(minute|minutes|min|second|seconds|sec|hour|hours|hr)", s)
+        if m:
+            value = int(m.group(1))
+            unit = m.group(2)
+            if "sec" in unit:
+                return value
+            elif "min" in unit:
+                return value * 60
+            elif "hour" in unit or "hr" in unit:
+                return value * 3600
+
+        # 'at HH:MM AM/PM' or 'at HH AM/PM' or 'at HH:MM'
+        m = re.match(r"at\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?", s)
+        if m:
+            hour = int(m.group(1))
+            minute = int(m.group(2)) if m.group(2) else 0
+            period = m.group(3)
+            if period == "pm" and hour != 12:
+                hour += 12
+            elif period == "am" and hour == 12:
+                hour = 0
+            now = datetime.now()
+            target = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+            if target <= now:
+                # next occurrence is tomorrow
+                from datetime import timedelta
+                target += timedelta(days=1)
+            return (target - now).total_seconds()
+
+        return None
 
     def _get_coordinates(self, city: str):
         # Uses Open-Meteo's geocoding API to convert a city name into latitude/longitude
