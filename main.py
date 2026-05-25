@@ -194,8 +194,7 @@ def main():
     screen = app.primaryScreen().geometry()
 
     hud = JarvisHUD()
-    hud.setFixedHeight(screen.height())
-    hud.move(screen.width() - hud.width(), 0)
+    hud.setGeometry(0, 0, screen.width(), screen.height())
     hud.update_memory(name or "Unknown", memory.get_user_city() or "Unknown",
                       memory.memory["jarvis"]["total_sessions"])
     hud.set_status("LISTENING")
