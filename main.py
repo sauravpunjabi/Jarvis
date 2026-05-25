@@ -7,7 +7,6 @@ from datetime import datetime
 from dotenv import load_dotenv
 
 _READY_LINES = [
-    "Yes sir?",
     "How can I help?",
     "At your service.",
     "Go ahead, sir.",
@@ -15,8 +14,7 @@ _READY_LINES = [
     "What do you need?",
     "Ready when you are.",
     "Online and awaiting, sir.",
-    "Speak your command.",
-    "I'm here.",
+    "Speak your command."
 ]
 
 JARVIS_LOGO = """
