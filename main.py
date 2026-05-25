@@ -35,7 +35,7 @@ def _greeting(name: str) -> str:
     return f"Good {period}{suffix}. All systems online, sir."
 
 
-def _voice_loop(router, speaker, listener, memory, hud=None):
+def _voice_loop(router, speaker, listener, memory, dual_brain, hud=None):
     """
     Main voice loop — runs in a background thread when HUD is active,
     or directly in the main thread when --no-hud is used.
@@ -61,6 +61,22 @@ def _voice_loop(router, speaker, listener, memory, hud=None):
             if hud:
                 hud.set_status("THINKING")
 
+            # Intercept brain-switching voice commands before routing to skills
+            lower_cmd = command.lower()
+            switched = None
+            if any(p in lower_cmd for p in ["switch to gemini", "gemini mode", "cloud mode", "use gemini"]):
+                switched = dual_brain.switch_to_gemini()
+            elif any(p in lower_cmd for p in ["switch to local", "local mode", "offline mode", "use ollama", "switch to ollama"]):
+                switched = dual_brain.switch_to_ollama()
+
+            if switched:
+                print(f"[JARVIS] (brain_switch) {switched}")
+                if hud:
+                    hud.set_transcript(command, switched)
+                    hud.set_status("SPEAKING")
+                speaker.speak(switched)
+                continue
+
             response, skill = router.route(command)
             memory.update_last_seen(command)
 
@@ -82,7 +98,7 @@ def _voice_loop(router, speaker, listener, memory, hud=None):
             print(f"[JARVIS] Voice loop error: {e}")
 
 
-def _text_loop(router, memory):
+def _text_loop(router, memory, dual_brain):
     """Fallback text-based loop — useful for testing without a mic."""
     print("\n[JARVIS] Text mode. Type a command or 'quit' to exit.\n")
     while True:
@@ -93,6 +109,18 @@ def _text_loop(router, memory):
                 break
             if not command:
                 continue
+
+            # Intercept brain-switching commands before routing to skills
+            lower_cmd = command.lower()
+            if any(p in lower_cmd for p in ["switch to gemini", "gemini mode", "cloud mode", "use gemini"]):
+                r = dual_brain.switch_to_gemini()
+                print(f"JARVIS [brain_switch]: {r}\n")
+                continue
+            elif any(p in lower_cmd for p in ["switch to local", "local mode", "offline mode", "use ollama", "switch to ollama"]):
+                r = dual_brain.switch_to_ollama()
+                print(f"JARVIS [brain_switch]: {r}\n")
+                continue
+
             response, skill = router.route(command)
             memory.update_last_seen(command)
             print(f"JARVIS [{skill}]: {response}\n")
@@ -114,11 +142,13 @@ def main():
     # ── Core modules (always loaded) ─────────────────────────────────────────
     from memory.memory import JarvisMemory
     from brain.skill_router import SkillRouter
+    from brain.dual_brain import JarvisDualBrain
     from voice.speaker import JarvisSpeaker
 
-    memory  = JarvisMemory()
-    router  = SkillRouter()
-    speaker = JarvisSpeaker()
+    memory     = JarvisMemory()
+    router     = SkillRouter()
+    dual_brain = JarvisDualBrain()
+    speaker    = JarvisSpeaker()
 
     # Greet
     name     = memory.get_user_name()
@@ -126,9 +156,15 @@ def main():
     print(f"[JARVIS] {greeting}")
     speaker.speak(greeting)
 
+    # Announce which brain is active on startup
+    brain_label = "local Ollama" if dual_brain.get_active_brain() == "ollama" else "Gemini"
+    brain_msg   = f"Active brain is {brain_label}, sir."
+    print(f"[JARVIS] {brain_msg}")
+    speaker.speak(brain_msg)
+
     # ── Text mode ────────────────────────────────────────────────────────────
     if args.text:
-        _text_loop(router, memory)
+        _text_loop(router, memory, dual_brain)
         speaker.cleanup()
         sys.exit(0)
 
@@ -145,7 +181,7 @@ def main():
     # ── No-HUD: run voice loop in main thread ─────────────────────────────────
     if args.no_hud:
         try:
-            _voice_loop(router, speaker, listener, memory, hud=None)
+            _voice_loop(router, speaker, listener, memory, dual_brain, hud=None)
         except KeyboardInterrupt:
             _shutdown()
         return
@@ -168,7 +204,7 @@ def main():
     # Start voice loop in daemon thread
     t = threading.Thread(
         target=_voice_loop,
-        args=(router, speaker, listener, memory, hud),
+        args=(router, speaker, listener, memory, dual_brain, hud),
         daemon=True,
     )
     t.start()
