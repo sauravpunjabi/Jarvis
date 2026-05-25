@@ -1,6 +1,6 @@
 {
   "user": {
-    "name": "Tony",
+    "name": "Saurav",
     "city": "Dhule",
     "preferences": [
       "dark theme",
@@ -13,7 +13,7 @@
   },
   "jarvis": {
     "created_at": "2026-04-23",
-    "total_sessions": 5,
-    "last_seen": "2026-04-23 21:36:19.137808"
+    "total_sessions": 11,
+    "last_seen": "2026-05-25 12:13:34.266735"
   }
 }

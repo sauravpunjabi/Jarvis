@@ -35,11 +35,13 @@ class JarvisListener:
         print(f"[LISTENER] Loading Whisper '{WHISPER_MODEL}' model on {DEVICE}...")
         try:
             self.whisper_model = whisper.load_model(WHISPER_MODEL, device=DEVICE)
+            self._whisper_device = DEVICE
             print(f"[LISTENER] Whisper loaded on {DEVICE} ✅")
         except Exception as e:
             # If GPU fails, fall back to CPU
             print(f"[LISTENER] GPU load failed ({e}), falling back to CPU...")
             self.whisper_model = whisper.load_model(WHISPER_MODEL, device="cpu")
+            self._whisper_device = "cpu"
             print("[LISTENER] Whisper loaded on CPU ✅")
 
         # Load openwakeword model for "hey jarvis" detection
@@ -134,8 +136,7 @@ class JarvisListener:
         """
         print("[LISTENER] Transcribing...")
 
-        # Whisper transcribe — fp16=True uses faster half-precision on GPU
-        result = self.whisper_model.transcribe(audio_np, fp16=(DEVICE == "cuda"))
+        result = self.whisper_model.transcribe(audio_np, fp16=(self._whisper_device == "cuda"))
         text = result["text"].strip()
 
         print(f"[LISTENER] You said: '{text}'")
